@@ -1,4 +1,5 @@
 name: CI Build
+
 on:
   push:
     branches:
@@ -10,7 +11,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: python:3.9-slim
 
     services:
       postgres:
@@ -28,12 +28,24 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
           pip install -r requirements.txt
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432; do
+            echo "Waiting for database connection..."
+            sleep 2
+          done
 
       - name: Lint with flake8
         run: |
@@ -43,4 +55,4 @@ jobs:
       - name: Run unit tests with nose
         run: nosetests
         env:
-          DATABASE_URI: "postgresql://postgres:pgs3cr3t@postgres:5432/testdb"
+          DATABASE_URI: "postgresql://postgres:pgs3cr3t@localhost:5432/testdb"
